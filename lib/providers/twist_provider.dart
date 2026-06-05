@@ -13,23 +13,27 @@ class TwistProvider extends ChangeNotifier {
 
   Future<bool> sendCode(String phone) async {
     state = AppState.loading;
+    message = '';
     notifyListeners();
     final ok = await _service.sendCode(phone);
     state = AppState.idle;
+    message = ok ? '' : '❌ فشل إرسال الكود';
     notifyListeners();
     return ok;
   }
 
   Future<bool> verify(String phone, String code) async {
     state = AppState.loading;
+    message = '';
     notifyListeners();
     final ok = await _service.verifyCode(phone, code);
     if (ok) {
       balance = await _service.getBalance();
       state = AppState.loggedIn;
+      message = '';
     } else {
       state = AppState.error;
-      message = 'كود خاطئ';
+      message = '❌ كود خاطئ أو انتهت صلاحيته';
     }
     notifyListeners();
     return ok;
