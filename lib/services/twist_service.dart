@@ -30,76 +30,92 @@ class TwistService {
   Future<bool> sendCode(String phone) async {
     if (phone.startsWith('01')) phone = '2$phone';
     _headers = _buildHeaders();
-    final r = await http.post(
-      Uri.parse('$_base/Dlogin/sendCode'),
-      headers: _headers,
-      body: jsonEncode({'dial': phone}),
-    );
-    return r.statusCode == 200;
+    try {
+      final r = await http.post(
+        Uri.parse('$_base/Dlogin/sendCode'),
+        headers: _headers,
+        body: jsonEncode({'dial': phone}),
+      ).timeout(const Duration(seconds: 15));
+      return r.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<bool> verifyCode(String phone, String code) async {
     if (phone.startsWith('01')) phone = '2$phone';
-    final r = await http.post(
-      Uri.parse('$_base/Dlogin/verify'),
-      headers: _headers,
-      body: jsonEncode({'dial': phone, 'verifyCode': code}),
-    );
-    if (r.statusCode != 200) return false;
-    final d = jsonDecode(r.body);
-    final token = d['token'];
-    if (token == null) return false;
-    _headers = _buildHeaders();
-    _headers['authorization'] = 'Bearer $token';
-    _headers['access-token'] = d['accessToken'] ?? '';
-    _headers['tgdeviceid'] = d['tgdeviceid'] ?? '22913102';
-    _headers['device_token'] = d['deviceToken'] ?? '';
-    _headers['tg-token'] = d['tgToken'] ?? '';
-    _headers['tg-refresh-token'] = d['tgRefreshToken'] ?? '';
-    return true;
+    try {
+      final r = await http.post(
+        Uri.parse('$_base/Dlogin/verify'),
+        headers: _headers,
+        body: jsonEncode({'dial': phone, 'verifyCode': code}),
+      ).timeout(const Duration(seconds: 15));
+      if (r.statusCode != 200) return false;
+      final d = jsonDecode(r.body);
+      final token = d['token'];
+      if (token == null) return false;
+      _headers = _buildHeaders();
+      _headers['authorization'] = 'Bearer $token';
+      _headers['access-token'] = d['accessToken'] ?? '';
+      _headers['tgdeviceid'] = d['tgdeviceid'] ?? '22913102';
+      _headers['device_token'] = d['deviceToken'] ?? '';
+      _headers['tg-token'] = d['tgToken'] ?? '';
+      _headers['tg-refresh-token'] = d['tgRefreshToken'] ?? '';
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<int> getBalance() async {
-    final r = await http.get(
-      Uri.parse('$_base/user/loyalty/balance/details'),
-      headers: _headers,
-    );
-    if (r.statusCode == 200) {
-      return jsonDecode(r.body)['balance'] ?? 0;
-    }
+    try {
+      final r = await http.get(
+        Uri.parse('$_base/user/loyalty/balance/details'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 15));
+      if (r.statusCode == 200) {
+        return jsonDecode(r.body)['balance'] ?? 0;
+      }
+    } catch (_) {}
     return 0;
   }
 
   Future<int> doTasks() async {
     int total = 0;
-    final r = await http.get(
-      Uri.parse('$_base/user/loyalty/achievements/v2'),
-      headers: _headers,
-    );
-    if (r.statusCode != 200) return 0;
-    final data = jsonDecode(r.body);
-    for (final cat in data['badges'] ?? []) {
-      for (final task in cat['badges'] ?? []) {
-        if (task['rewarded'] == true) continue;
-        try {
-          await http.post(
-            Uri.parse('$_base/loyalty/action/${task['id']}'),
-            headers: _headers,
-          );
-          total++;
-          await Future.delayed(const Duration(milliseconds: 500));
-        } catch (_) {}
+    try {
+      final r = await http.get(
+        Uri.parse('$_base/user/loyalty/achievements/v2'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 15));
+      if (r.statusCode != 200) return 0;
+      final data = jsonDecode(r.body);
+      for (final cat in data['badges'] ?? []) {
+        for (final task in cat['badges'] ?? []) {
+          if (task['rewarded'] == true) continue;
+          try {
+            await http.post(
+              Uri.parse('$_base/loyalty/action/${task['id']}'),
+              headers: _headers,
+            ).timeout(const Duration(seconds: 10));
+            total++;
+            await Future.delayed(const Duration(milliseconds: 500));
+          } catch (_) {}
+        }
       }
-    }
+    } catch (_) {}
     return total;
   }
 
   Future<bool> redeem(String pkg) async {
-    final r = await http.post(
-      Uri.parse('$_base/loyalty/redeem/$pkg'),
-      headers: _headers,
-    );
-    return r.statusCode == 200;
+    try {
+      final r = await http.post(
+        Uri.parse('$_base/loyalty/redeem/$pkg'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 15));
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 
   static const packages = {
