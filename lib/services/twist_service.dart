@@ -19,7 +19,6 @@ class TwistService {
       'platform': 'android',
       'accept': 'application/json',
       'accept-language': 'ar',
-      'host': 'api.twistmena.com',
       'device_id': deviceId,
       'X-Forwarded-For': ip,
       'X-Real-IP': ip,
