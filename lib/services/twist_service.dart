@@ -62,98 +62,25 @@ class TwistService {
       ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode != 200) {
-        return {'success': false, 'message': 'رمز التحقق غير صحيح'};
+        return {'success': false, 'message': 'رمز التحقق غير صحيح - ${res.statusCode}'};
       }
 
-      final data = jsonDecode(res.body);
-      final newHeaders = Map<String, String>.from(headers);
+      // نرجع الـ response كامل عشان نشوف فيه إيه
+      final body = res.body;
+      final resHeaders = res.headers;
 
-      String token = data['token'] ?? data['authorization'] ?? '';
-      if (token.isEmpty) {
-        token = res.headers['authorization']?.replaceAll('Bearer ', '') ?? '';
-      }
-      if (token.isEmpty) return {'success': false, 'message': 'لم يتم استلام التوكن'};
+      return {
+        'success': false,
+        'message': 'BODY: ${body.substring(0, body.length > 200 ? 200 : body.length)} | HEADERS: ${resHeaders.toString().substring(0, 100)}'
+      };
 
-      newHeaders['authorization'] = 'Bearer ${token.replaceAll('Bearer ', '')}';
-      newHeaders['access-token'] = data['accessToken'] ?? '';
-      newHeaders['tg-token'] = data['tgToken'] ?? data['tg_token'] ?? '';
-      newHeaders['tg-refresh-token'] = data['tgRefreshToken'] ?? data['tg_refresh_token'] ?? '';
-      newHeaders['tgdeviceid'] = data['tgDeviceId'] ?? data['tg_device_id'] ?? '22821093';
-
-      return {'success': true, 'headers': newHeaders};
     } catch (e) {
-      return {'success': false, 'message': 'خطأ في التحقق'};
+      return {'success': false, 'message': 'خطأ: $e'};
     }
   }
 
-  Future<int> getBalance(Map<String, String> headers) async {
-    try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/music/user/loyalty/balance/details'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data is Map) return int.tryParse('${data['balance']}') ?? 0;
-        if (data is List && data.isNotEmpty) return int.tryParse('${data[0]['balance']}') ?? 0;
-      }
-    } catch (_) {}
-    return 0;
-  }
-
-  Future<int> completeAchievements(Map<String, String> headers) async {
-    int count = 0;
-    try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/music/user/loyalty/achievements/v2'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 8));
-      if (res.statusCode != 200) return 0;
-
-      final data = jsonDecode(res.body);
-      List categories = data is Map ? (data['badges'] ?? []) : data is List ? data : [];
-
-      for (final cat in categories) {
-        if (cat is! Map) continue;
-        for (final task in (cat['badges'] ?? [])) {
-          if (task is! Map || task['rewarded'] == true) continue;
-          final id = task['id'];
-          if (id == null) continue;
-          try {
-            final r = await http.post(
-              Uri.parse('$_baseUrl/music/loyalty/action/$id'),
-              headers: headers,
-            ).timeout(const Duration(seconds: 5));
-            if (r.statusCode == 200) count++;
-          } catch (_) {}
-          await Future.delayed(const Duration(milliseconds: 300));
-        }
-      }
-    } catch (_) {}
-    return count;
-  }
-
-  List<Map<String, dynamic>> buildRedeemOptions(int balance) {
-    final options = <Map<String, dynamic>>[
-      {'cost': 100,  'units': 50,   'code': 'EAND_50_UNITS_ID_9'},
-      {'cost': 200,  'units': 100,  'code': 'EAND_100_UNITS_ID_10'},
-      {'cost': 300,  'units': 150,  'code': 'EAND_150_UNITS_ID_11'},
-      {'cost': 600,  'units': 300,  'code': 'EAND_300_UNITS_ID_12'},
-      {'cost': 1000, 'units': 500,  'code': 'EAND_500_UNITS_ID_13'},
-      {'cost': 2000, 'units': 1000, 'code': 'EAND_1000_UNITS_ID_14'},
-    ];
-    return options.where((o) => balance >= (o['cost'] as int)).toList();
-  }
-
-  Future<bool> redeem(Map<String, String> headers, String code, int units) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/music/loyalty/redeem/$code'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      return res.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
+  Future<int> getBalance(Map<String, String> headers) async => 0;
+  Future<int> completeAchievements(Map<String, String> headers) async => 0;
+  List<Map<String, dynamic>> buildRedeemOptions(int balance) => [];
+  Future<bool> redeem(Map<String, String> headers, String code, int units) async => false;
 }
