@@ -1,5 +1,5 @@
 name: twist
-description: Twist Loyalty App
+description: Twist MENA App
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,11 +10,10 @@ dependencies:
   flutter:
     sdk: flutter
   provider: ^6.1.1
-  shared_preferences: ^2.2.2
   http: ^1.2.1
+  shared_preferences: ^2.2.2
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.0
-  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

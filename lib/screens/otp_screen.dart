@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/twist_provider.dart';
-import 'otp_screen.dart';
+import 'home_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class OtpScreen extends StatefulWidget {
+  final String phone;
+  const OtpScreen({super.key, required this.phone});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _phoneController = TextEditingController();
+class _OtpScreenState extends State<OtpScreen> {
+  final _otpController = TextEditingController();
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
@@ -24,30 +25,32 @@ class _LoginScreenState extends State<LoginScreen> {
     final provider = context.watch<TwistProvider>();
 
     return Scaffold(
+      appBar: AppBar(title: const Text('رمز التحقق'), backgroundColor: Colors.transparent),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Twist', style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.purple)),
-              const SizedBox(height: 8),
-              const Text('أدخل رقم هاتفك', style: TextStyle(fontSize: 16, color: Colors.white70)),
-              const SizedBox(height: 40),
+              const Icon(Icons.lock_outline, size: 64, color: Colors.purple),
+              const SizedBox(height: 16),
+              Text('أدخل الكود المرسل إلى ${widget.phone}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70)),
+              const SizedBox(height: 32),
               TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
+                controller: _otpController,
+                keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18),
+                style: const TextStyle(fontSize: 24, letterSpacing: 8),
+                maxLength: 6,
                 decoration: InputDecoration(
-                  hintText: '01xxxxxxxxx',
+                  hintText: '------',
                   filled: true,
                   fillColor: Colors.white10,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  prefixIcon: const Icon(Icons.phone, color: Colors.purple),
                 ),
               ),
-              const SizedBox(height: 16),
               if (provider.state == AppState.error)
                 Text(provider.message, style: const TextStyle(color: Colors.red)),
               const SizedBox(height: 16),
@@ -56,12 +59,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: provider.state == AppState.loading ? null : () async {
-                    final phone = _phoneController.text.trim();
-                    if (phone.isEmpty) return;
-                    final ok = await provider.sendOtp(phone);
+                    final code = _otpController.text.trim();
+                    if (code.isEmpty) return;
+                    final ok = await provider.verifyOtp(widget.phone, code);
                     if (ok && context.mounted) {
-                      Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => OtpScreen(phone: phone),
+                      Navigator.pushReplacement(context, MaterialPageRoute(
+                        builder: (_) => const HomeScreen(),
                       ));
                     }
                   },
@@ -71,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: provider.state == AppState.loading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('إرسال الكود', style: TextStyle(fontSize: 16)),
+                      : const Text('تحقق', style: TextStyle(fontSize: 16)),
                 ),
               ),
             ],

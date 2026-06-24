@@ -1,61 +1,83 @@
 import 'package:flutter/material.dart';
 import '../services/twist_service.dart';
 
-enum AppState { idle, loading, loggedIn, error }
+enum AppState { idle, loading, success, error }
 
 class TwistProvider extends ChangeNotifier {
-  final _service = TwistService();
+  final TwistService _service = TwistService();
+
   AppState state = AppState.idle;
-  int balance = 0;
   String message = '';
-  int tasksCount = 0;
-  bool redeemSuccess = false;
+  int balanceBefore = 0;
+  int balanceAfter = 0;
+  int earned = 0;
+  List<Map<String, dynamic>> redeemOptions = [];
+  Map<String, String> headers = {};
 
-  Future<bool> sendCode(String phone) async {
+  Future<bool> sendOtp(String phone) async {
     state = AppState.loading;
     message = '';
     notifyListeners();
-    final ok = await _service.sendCode(phone);
-    state = AppState.idle;
-    message = ok ? '' : '❌ فشل إرسال الكود';
-    notifyListeners();
-    return ok;
-  }
-
-  Future<bool> verify(String phone, String code) async {
-    state = AppState.loading;
-    message = '';
-    notifyListeners();
-    final ok = await _service.verifyCode(phone, code);
-    if (ok) {
-      balance = await _service.getBalance();
-      state = AppState.loggedIn;
-      message = '';
+    final result = await _service.sendOtp(phone);
+    if (result['success']) {
+      headers = result['headers'];
+      state = AppState.success;
     } else {
       state = AppState.error;
-      message = '❌ كود خاطئ أو انتهت صلاحيته';
+      message = result['message'];
     }
     notifyListeners();
-    return ok;
+    return result['success'];
   }
 
-  Future<void> doTasks() async {
+  Future<bool> verifyOtp(String phone, String code) async {
     state = AppState.loading;
     notifyListeners();
-    tasksCount = await _service.doTasks();
-    balance = await _service.getBalance();
-    message = 'تم تنفيذ $tasksCount مهمة';
-    state = AppState.loggedIn;
+    final result = await _service.verifyOtp(phone, code, headers);
+    if (result['success']) {
+      headers = result['headers'];
+      state = AppState.success;
+    } else {
+      state = AppState.error;
+      message = result['message'];
+    }
+    notifyListeners();
+    return result['success'];
+  }
+
+  Future<void> collectAchievements() async {
+    state = AppState.loading;
+    message = 'جارٍ تجميع الكوينز...';
+    notifyListeners();
+
+    balanceBefore = await _service.getBalance(headers);
+
+    for (int i = 0; i < 4; i++) {
+      await _service.completeAchievements(headers);
+    }
+
+    balanceAfter = await _service.getBalance(headers);
+    earned = balanceAfter - balanceBefore;
+    redeemOptions = _service.buildRedeemOptions(balanceAfter);
+
+    state = AppState.success;
+    message = '';
     notifyListeners();
   }
 
-  Future<void> redeem(String pkg) async {
+  Future<bool> redeem(String code, int units) async {
     state = AppState.loading;
     notifyListeners();
-    redeemSuccess = await _service.redeem(pkg);
-    balance = await _service.getBalance();
-    message = redeemSuccess ? '✅ تم الاسترداد' : '❌ فشل الاسترداد';
-    state = AppState.loggedIn;
+    final result = await _service.redeem(headers, code, units);
+    if (result) {
+      balanceAfter = await _service.getBalance(headers);
+      state = AppState.success;
+      message = 'تم السحب بنجاح! +$units وحدة';
+    } else {
+      state = AppState.error;
+      message = 'فشل السحب';
+    }
     notifyListeners();
+    return result;
   }
 }
